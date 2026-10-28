@@ -1,4 +1,5 @@
 const http = require("http");
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
@@ -20,9 +21,19 @@ const servidor = http.createServer((req, res) => {
     res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
     return res.end("El parámetro 'palabras' debe ser un entero entre 1 y 20");
   }
-  const palabras = Array.from({ length: x }, () => DICCIONARIO[Math.floor(Math.random() * DICCIONARIO.length)]);
+  // crypto.randomInt: Math.random no es seguro para contraseñas
+  let palabras = Array.from({ length: x }, () => DICCIONARIO[crypto.randomInt(DICCIONARIO.length)]);
+  if (url.searchParams.get("mayusculas") === "1") {
+    palabras = palabras.map((p) => p.charAt(0).toUpperCase() + p.slice(1));
+  }
+  const contrasena = palabras.join(url.searchParams.get("separador") ?? "-");
+
+  if (url.searchParams.get("formato") === "json") {
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    return res.end(JSON.stringify({ contrasena, longitud: contrasena.length }));
+  }
   res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-  res.end(`<h1>Contraseña</h1><p>${palabras.join("-")}</p>`);
+  res.end(`<h1>Contraseña</h1><p>${contrasena}</p>`);
 });
 
 servidor.listen(PUERTO, () => console.log(`http://localhost:${PUERTO}/?palabras=4`));
