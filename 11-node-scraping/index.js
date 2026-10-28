@@ -12,7 +12,7 @@ async function descargar() {
     const $ = cheerio.load(await res.text());
     ultimo = {
       fecha: new Date().toISOString(),
-      titulo: $("h1").first().text().trim(),
+      titulo: $("title").first().text().trim(),
       parrafo: $("p").first().text().trim(),
     };
     console.log(ultimo);
