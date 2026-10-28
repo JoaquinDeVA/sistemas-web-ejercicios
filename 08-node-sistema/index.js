@@ -28,13 +28,17 @@ function mostrar(config) {
     const real = Number(ahora - tAnterior) / 1000;
     cpuAnterior = process.cpuUsage();
     tAnterior = ahora;
-    console.log(`CPU (proceso): ${(((uso.user + uso.system) / real) * 100).toFixed(1)}%`);
+    const porcentaje = ((uso.user + uso.system) / real) * 100;
+    console.log(`CPU (proceso): ${porcentaje.toFixed(1)}%`);
+    if (porcentaje > config.umbrales.cpuPorcentaje) console.warn(`AVISO: CPU por encima del ${config.umbrales.cpuPorcentaje}%`);
     console.log(`Carga del sistema (1 min): ${os.loadavg()[0].toFixed(2)}`);
   }
   if (memoria) {
     const m = process.memoryUsage();
     console.log(`Memoria node (RSS): ${(m.rss / 1024 ** 2).toFixed(1)} MB`);
-    console.log(`Memoria libre del sistema: ${(os.freemem() / 1024 ** 3).toFixed(2)} GB`);
+    const libreGB = os.freemem() / 1024 ** 3;
+    console.log(`Memoria libre del sistema: ${libreGB.toFixed(2)} GB`);
+    if (libreGB < config.umbrales.memoriaLibreGB) console.warn(`AVISO: queda menos de ${config.umbrales.memoriaLibreGB} GB de memoria libre`);
   }
   if (tiempoSistema) console.log(`Sistema activo: ${Math.round(os.uptime())} s`);
   if (tiempoNode) console.log(`Node ejecutándose: ${Math.round(process.uptime())} s`);
