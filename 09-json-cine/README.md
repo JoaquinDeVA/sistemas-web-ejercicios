@@ -5,3 +5,12 @@
 ## JSON del ejercicio de buen formado
 
 No está bien formado: faltan comillas en `edad` y `mayorDeEdad`, `Madrid` no es una cadena, hay valores sueltos (`false`, `null`) dentro de un objeto/array sin clave, y sobra la coma final tras `direccion`. Además falta la coma tras `]` de `telefonos`.
+
+## API
+
+```
+node index.js
+GET /peliculas
+GET /peliculas?sala=17
+GET /peliculas/Resident%20Evil
+```
