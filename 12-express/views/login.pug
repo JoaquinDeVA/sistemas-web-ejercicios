@@ -1,0 +1,10 @@
+extends layout
+
+block content
+  h1= title
+  form(method='post', action='/login')
+    label Usuario
+      input(type='text', name='usuario')
+    label Contraseña
+      input(type='password', name='clave')
+    button(type='submit') Entrar

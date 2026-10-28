@@ -1,0 +1,25 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #111827;
+  color: #e5e7eb;
+}
+
+main {
+  max-width: 640px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  text-align: center;
+}
+
+canvas {
+  width: 100%;
+  border-radius: 8px;
+  cursor: none;
+}
+
+kbd {
+  padding: 0 .3rem;
+  border: 1px solid #6b7280;
+  border-radius: 4px;
+}

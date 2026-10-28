@@ -1,0 +1,39 @@
+body {
+  font-family: sans-serif;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #999;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+button {
+  padding: 0.4rem 0.8rem;
+}
+
+.error {
+  color: #c00;
+  font-size: 0.9rem;
+}
+
+#mensaje {
+  color: #070;
+  font-weight: bold;
+}

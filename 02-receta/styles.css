@@ -1,0 +1,175 @@
+/* Selector de elemento */
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: #3b2a1a;
+  background-color: #fdf6ec;
+}
+
+/* Cabecera */
+header {
+  background-color: #d97706;
+  color: #fff8f0;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 2.2rem;
+}
+
+/* Selector de clase */
+.subtitle {
+  margin: 0.4rem 0 0;
+  font-style: italic;
+  color: #fde3c4;
+}
+
+/* Layout de dos columnas: menú lateral + contenido */
+.layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 2rem;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+/* Menú lateral */
+.sidebar {
+  flex: 0 0 200px;
+  background-color: #fff1dc;
+  border: 1px solid #f0c98a;
+  border-radius: 8px;
+  padding: 1rem;
+  position: sticky;
+  top: 1rem;
+}
+
+.sidebar h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+  color: #b45309;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar li + li {
+  margin-top: 0.5rem;
+}
+
+/* Selector de descendiente */
+.sidebar a {
+  text-decoration: none;
+  color: #92400e;
+  font-weight: 600;
+}
+
+/* Pseudo-clase */
+.sidebar a:hover {
+  color: #d97706;
+  text-decoration: underline;
+}
+
+main {
+  flex: 1;
+  min-width: 0;
+}
+
+figure {
+  text-align: center;
+  margin: 0 0 2rem;
+}
+
+figure img {
+  border-radius: 50%;
+  border: 4px solid #f0c98a;
+}
+
+figcaption {
+  margin-top: 0.5rem;
+  color: #7c5c3b;
+}
+
+/* Selector de id */
+#info {
+  margin-bottom: 2rem;
+}
+
+section {
+  margin-bottom: 2rem;
+}
+
+/* Selector de descendiente */
+main h2 {
+  border-bottom: 2px solid #f0c98a;
+  padding-bottom: 0.3rem;
+  color: #b45309;
+}
+
+/* Selector de clase */
+.ingredients-list,
+.steps-list {
+  padding-left: 1.4rem;
+}
+
+.ingredients-list li,
+.steps-list li {
+  margin-bottom: 0.4rem;
+}
+
+/* Pseudo-clase :nth-child */
+.ingredients-list li:nth-child(odd) {
+  color: #92400e;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #f0c98a;
+}
+
+thead th {
+  background-color: #d97706;
+  color: #fff8f0;
+}
+
+/* Pseudo-clase :nth-child en filas de tabla */
+tbody tr:nth-child(even) {
+  background-color: #fff1dc;
+}
+
+/* Selector de atributo */
+a[href^="#"] {
+  cursor: pointer;
+}
+
+footer {
+  text-align: center;
+  padding: 1.2rem;
+  background-color: #92400e;
+  color: #fde3c4;
+}
+
+/* Media query: apila el menú lateral en pantallas pequeñas */
+@media (max-width: 600px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: static;
+    width: 100%;
+    flex: none;
+  }
+}

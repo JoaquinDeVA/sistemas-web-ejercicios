@@ -1,0 +1,9 @@
+extends layout
+
+block content
+  h1= title
+  ul
+    each el in elementos
+      li= el
+  a(href='/login')
+    button(type='button') Login

@@ -1,0 +1,22 @@
+{
+  "peliculas": [
+    {
+      "titulo": "Spider-Man: Brand New Day",
+      "director": "Destin Daniel",
+      "actores": ["Tom Holland", "Zendaya"],
+      "sesiones": [
+        { "sala": 17, "horas": ["17:00", "20:15"] },
+        { "sala": 20, "horas": ["18:00", "21:15"] }
+      ]
+    },
+    {
+      "titulo": "Resident Evil",
+      "director": "Zach Cregger",
+      "actores": ["Austin Abrams", "Zach Cherry"],
+      "sesiones": [
+        { "sala": 5, "horas": ["19:15"] },
+        { "sala": 22, "horas": ["22:30"] }
+      ]
+    }
+  ]
+}
