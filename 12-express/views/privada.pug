@@ -1,0 +1,6 @@
+extends layout
+
+block content
+  h1= title
+  p Hola, #{usuario}. Esta página solo es visible con la sesión iniciada.
+  a(href='/logout') Cerrar sesión

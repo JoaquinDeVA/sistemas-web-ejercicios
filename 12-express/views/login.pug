@@ -2,9 +2,12 @@ extends layout
 
 block content
   h1= title
+  if error
+    p.error= error
   form(method='post', action='/login')
     label Usuario
       input(type='text', name='usuario')
     label Contraseña
       input(type='password', name='clave')
     button(type='submit') Entrar
+  p Usuario de prueba: admin / 1234

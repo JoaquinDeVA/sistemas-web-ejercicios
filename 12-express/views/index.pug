@@ -5,5 +5,8 @@ block content
   ul
     each el in elementos
       li= el
-  a(href='/login')
-    button(type='button') Login
+  if usuario
+    a(href='/privada') Zona privada
+  else
+    a(href='/login')
+      button(type='button') Login
