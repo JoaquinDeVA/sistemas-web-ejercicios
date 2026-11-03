@@ -27,7 +27,6 @@ let anguloVentilador = 0;
 let apagado = false;
 let ultimoTiempo = null;
 let tiempo = 0; // segundos totales, para las animaciones
-const avisos = []; // mensajes flotantes al pulsar un botón
 
 const contenedorBotones = document.getElementById('botones');
 const botones = {};
@@ -43,14 +42,12 @@ function alternar(accion) {
   if (apagado) return;
   if (activas.has(accion.id)) {
     activas.delete(accion.id);
-    avisos.push({ texto: `${accion.texto}: -${accion.calor} °C`, color: '#93c5fd', vida: 1.5 });
     // Sin HDMI no hay vídeo por HDMI
     for (const otra of ACCIONES) {
       if (otra.requiere === accion.id) activas.delete(otra.id);
     }
   } else {
     activas.add(accion.id);
-    avisos.push({ texto: `${accion.texto}: +${accion.calor} °C`, color: '#fca5a5', vida: 1.5 });
   }
   actualizarBotones();
 }
@@ -87,8 +84,6 @@ function temperaturaObjetivo() {
 
 function actualizar(dt) {
   tiempo += dt;
-  for (const a of avisos) a.vida -= dt;
-  while (avisos.length && avisos[0].vida <= 0) avisos.shift();
   if (!apagado) {
     // La temperatura se acerca al objetivo de forma exponencial
     // (el factor depende de dt para que no cambie con los FPS)
@@ -177,7 +172,6 @@ function dibujarPantallaPortatil(w, h) {
     texto('campusvirtual.unizar.es/blackboard', 52, 50, '#475569', '11px system-ui');
     ctx.fillStyle = '#e2e8f0';
     for (let k = 0; k < 6; k++) ctx.fillRect(20, 80 + k * 22, k % 2 ? w - 120 : w - 60, 10);
-    texto('40 pestañas · 6 GB de RAM', w - 10, 22, '#b91c1c', 'bold 12px system-ui', 'right');
   }
 
   if (activas.has('codigo')) {
@@ -350,14 +344,6 @@ function dibujarTermometro(x, y, ancho, alto) {
   ctx.stroke();
 }
 
-function dibujarAvisos() {
-  avisos.forEach((a, i) => {
-    ctx.globalAlpha = Math.min(1, a.vida);
-    texto(a.texto, ANCHO / 2, 600 + (1 - a.vida) * -40 - i * 0, a.color, 'bold 28px system-ui', 'center');
-  });
-  ctx.globalAlpha = 1;
-}
-
 function dibujar() {
   ctx.fillStyle = '#0f172a';
   ctx.fillRect(0, 0, ANCHO, ALTO);
@@ -375,7 +361,6 @@ function dibujar() {
   dibujarTermometro(30, 110, 36, 460);
 
   texto(`${temperatura.toFixed(0)} °C`, ANCHO / 2, 70, '#e5e7eb', 'bold 56px system-ui', 'center');
-  dibujarAvisos();
   if (apagado) {
     texto('Apagado térmico. Pulsa Espacio para encenderlo', ANCHO / 2, 680, '#f87171', '22px system-ui', 'center');
   } else if (temperatura >= TEMP_THROTTLING) {
