@@ -3,158 +3,176 @@ const ctx = lienzo.getContext('2d');
 const ANCHO = lienzo.width;
 const ALTO = lienzo.height;
 
-// Imagen de la nave
-const imgNave = new Image();
-imgNave.src = 'nave.svg';
+const imgPortatil = new Image();
+imgPortatil.src = 'portatil.svg';
 
-// Estado del juego. Las velocidades están en píxeles por segundo,
-// así el movimiento no depende de la tasa de refresco del monitor.
-const nave = { x: ANCHO / 2, y: ALTO - 50, tam: 64, velocidad: 400 };
-const teclas = {};
-let estrellas = [];
-let fondo = [];
-let puntos = 0;
-let vidas = 3;
-let pausado = false;
-let tiempoHastaEstrella = 0;
+// Cada acción suma grados a la temperatura a la que tiende el portátil.
+// "requiere" bloquea el botón hasta que esté activa otra acción.
+const ACCIONES = [
+  { id: 'hdmi', texto: 'Conectar HDMI', calor: 6 },
+  { id: 'video', texto: 'Vídeo por HDMI', calor: 14, requiere: 'hdmi' },
+  { id: 'codigo', texto: 'Ejecutar código', calor: 12 },
+  { id: 'compilar', texto: 'Compilar el kernel', calor: 22 },
+  { id: 'chrome', texto: '40 pestañas de Chrome', calor: 10 },
+  { id: 'docker', texto: 'Docker + 3 contenedores', calor: 12 },
+  { id: 'rendimiento', texto: 'Modo rendimiento', calor: 10 },
+];
+
+const TEMP_AMBIENTE = 35;
+const TEMP_THROTTLING = 90; // A partir de aquí el portátil se frena
+const TEMP_APAGADO = 105;
+
+// Estado. Las velocidades están en unidades por segundo, así la animación
+// no depende de la tasa de refresco del monitor.
+const activas = new Set();
+let temperatura = TEMP_AMBIENTE;
+let anguloVentilador = 0;
+let apagado = false;
 let ultimoTiempo = null;
 
-// Estrellas del fondo, decorativas
-for (let i = 0; i < 80; i++) {
-  fondo.push({ x: Math.random() * ANCHO, y: Math.random() * ALTO, vel: 20 + Math.random() * 60 });
+const contenedorBotones = document.getElementById('botones');
+const botones = {};
+for (const accion of ACCIONES) {
+  const boton = document.createElement('button');
+  boton.textContent = accion.texto;
+  boton.addEventListener('click', () => alternar(accion));
+  contenedorBotones.append(boton);
+  botones[accion.id] = boton;
+}
+
+function alternar(accion) {
+  if (apagado) return;
+  if (activas.has(accion.id)) {
+    activas.delete(accion.id);
+    // Sin HDMI no hay vídeo por HDMI
+    for (const otra of ACCIONES) {
+      if (otra.requiere === accion.id) activas.delete(otra.id);
+    }
+  } else {
+    activas.add(accion.id);
+  }
+  actualizarBotones();
+}
+
+function actualizarBotones() {
+  for (const accion of ACCIONES) {
+    botones[accion.id].classList.toggle('activo', activas.has(accion.id));
+    botones[accion.id].disabled = apagado || (accion.requiere && !activas.has(accion.requiere));
+  }
 }
 
 function reiniciar() {
-  estrellas = [];
-  puntos = 0;
-  vidas = 3;
-  pausado = false;
+  activas.clear();
+  temperatura = TEMP_AMBIENTE;
+  apagado = false;
+  actualizarBotones();
 }
 
-function crearEstrella() {
-  estrellas.push({
-    x: 20 + Math.random() * (ANCHO - 40),
-    y: -20,
-    radio: 10 + Math.random() * 8,
-    vel: 100 + Math.random() * 100 + puntos * 5,
-    angulo: 0,
-    giro: (Math.random() - 0.5) * 6 // radianes por segundo
-  });
-}
-
-// --- Entrada del usuario ---
 document.addEventListener('keydown', (e) => {
-  teclas[e.key] = true;
   if (e.key === ' ') {
     e.preventDefault();
-    if (vidas <= 0) reiniciar();
-    else pausado = !pausado;
+    reiniciar();
   }
-});
-document.addEventListener('keyup', (e) => { teclas[e.key] = false; });
-
-lienzo.addEventListener('mousemove', (e) => {
-  const rect = lienzo.getBoundingClientRect();
-  // El canvas puede estar escalado por CSS, convertimos a coordenadas internas
-  nave.x = (e.clientX - rect.left) * (ANCHO / rect.width);
 });
 
 // --- Lógica ---
+function temperaturaObjetivo() {
+  let objetivo = TEMP_AMBIENTE;
+  for (const accion of ACCIONES) {
+    if (activas.has(accion.id)) objetivo += accion.calor;
+  }
+  return objetivo;
+}
+
 function actualizar(dt) {
-  for (const s of fondo) {
-    s.y += s.vel * dt;
-    if (s.y > ALTO) { s.y = 0; s.x = Math.random() * ANCHO; }
-  }
-
-  if (pausado || vidas <= 0) return;
-
-  if (teclas['ArrowLeft']) nave.x -= nave.velocidad * dt;
-  if (teclas['ArrowRight']) nave.x += nave.velocidad * dt;
-  nave.x = Math.max(nave.tam / 2, Math.min(ANCHO - nave.tam / 2, nave.x));
-
-  tiempoHastaEstrella -= dt;
-  if (tiempoHastaEstrella <= 0) {
-    crearEstrella();
-    tiempoHastaEstrella = 0.4 + Math.random() * 0.6;
-  }
-
-  for (const e of estrellas) {
-    e.y += e.vel * dt;
-    e.angulo += e.giro * dt;
-  }
-
-  estrellas = estrellas.filter((e) => {
-    const dx = e.x - nave.x;
-    const dy = e.y - nave.y;
-    if (Math.hypot(dx, dy) < e.radio + nave.tam / 3) {
-      puntos++;
-      return false;
+  if (!apagado) {
+    // La temperatura se acerca al objetivo de forma exponencial
+    // (el factor depende de dt para que no cambie con los FPS)
+    temperatura += (temperaturaObjetivo() - temperatura) * (1 - Math.exp(-dt / 4));
+    if (temperatura >= TEMP_APAGADO) {
+      apagado = true;
+      activas.clear();
+      actualizarBotones();
     }
-    if (e.y - e.radio > ALTO) {
-      vidas--;
-      return false;
-    }
-    return true;
-  });
+  } else {
+    temperatura += (TEMP_AMBIENTE - temperatura) * (1 - Math.exp(-dt / 6));
+  }
+
+  // El ventilador gira más rápido cuanto más calor hace (vueltas por segundo)
+  const vueltas = apagado ? 0 : Math.max(0, (temperatura - 40) / 8);
+  anguloVentilador += vueltas * Math.PI * 2 * dt;
 }
 
 // --- Dibujo ---
-function dibujarEstrella(e) {
+function colorTemperatura(t) {
+  // De azul (35 °C) a rojo (105 °C) pasando por verde y amarillo
+  const f = Math.max(0, Math.min(1, (t - TEMP_AMBIENTE) / (TEMP_APAGADO - TEMP_AMBIENTE)));
+  return `hsl(${220 - f * 220}, 85%, 55%)`;
+}
+
+function dibujarVentilador(x, y, radio) {
   ctx.save();
-  ctx.translate(e.x, e.y);
-  ctx.rotate(e.angulo);
-  ctx.beginPath();
-  for (let i = 0; i < 10; i++) {
-    const r = i % 2 === 0 ? e.radio : e.radio / 2.2;
-    const a = (Math.PI / 5) * i - Math.PI / 2;
-    ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  ctx.translate(x, y);
+  ctx.rotate(anguloVentilador);
+  ctx.fillStyle = '#9ca3af';
+  for (let i = 0; i < 5; i++) {
+    ctx.rotate((Math.PI * 2) / 5);
+    ctx.beginPath();
+    ctx.ellipse(radio * 0.55, 0, radio * 0.5, radio * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
   }
-  ctx.closePath();
-  ctx.fillStyle = '#fde047';
-  ctx.shadowColor = '#facc15';
-  ctx.shadowBlur = 15;
-  ctx.fill();
   ctx.restore();
+  ctx.beginPath();
+  ctx.arc(x, y, radio * 0.15, 0, Math.PI * 2);
+  ctx.fillStyle = '#374151';
+  ctx.fill();
+}
+
+function dibujarTermometro(x, y, ancho, alto) {
+  const f = Math.max(0, Math.min(1, (temperatura - TEMP_AMBIENTE) / (TEMP_APAGADO - TEMP_AMBIENTE)));
+  ctx.fillStyle = '#1f2937';
+  ctx.fillRect(x, y, ancho, alto);
+  ctx.fillStyle = colorTemperatura(temperatura);
+  ctx.fillRect(x, y + alto * (1 - f), ancho, alto * f);
+  ctx.strokeStyle = '#6b7280';
+  ctx.strokeRect(x, y, ancho, alto);
+  // Marca del throttling
+  const yThrottling = y + alto * (1 - (TEMP_THROTTLING - TEMP_AMBIENTE) / (TEMP_APAGADO - TEMP_AMBIENTE));
+  ctx.strokeStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.moveTo(x - 6, yThrottling);
+  ctx.lineTo(x + ancho + 6, yThrottling);
+  ctx.stroke();
 }
 
 function dibujar() {
-  // Fondo con degradado
-  const degradado = ctx.createLinearGradient(0, 0, 0, ALTO);
-  degradado.addColorStop(0, '#0f172a');
-  degradado.addColorStop(1, '#312e81');
-  ctx.fillStyle = degradado;
+  ctx.fillStyle = '#0f172a';
   ctx.fillRect(0, 0, ANCHO, ALTO);
 
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-  for (const s of fondo) ctx.fillRect(s.x, s.y, 2, 2);
+  // Resplandor tras el portátil según la temperatura
+  const f = Math.max(0, (temperatura - 50) / (TEMP_APAGADO - 50));
+  const resplandor = ctx.createRadialGradient(ANCHO / 2, 190, 20, ANCHO / 2, 190, 260);
+  resplandor.addColorStop(0, `rgba(239, 68, 68, ${Math.min(f, 1) * 0.6})`);
+  resplandor.addColorStop(1, 'rgba(239, 68, 68, 0)');
+  ctx.fillStyle = resplandor;
+  ctx.fillRect(0, 0, ANCHO, ALTO);
 
-  for (const e of estrellas) dibujarEstrella(e);
+  if (imgPortatil.complete) ctx.drawImage(imgPortatil, ANCHO / 2 - 150, 90, 300, 200);
+  dibujarVentilador(ANCHO / 2, 240, 30);
 
-  if (imgNave.complete) {
-    ctx.drawImage(imgNave, nave.x - nave.tam / 2, nave.y - nave.tam / 2, nave.tam, nave.tam);
-  }
+  dibujarTermometro(40, 40, 28, 280);
 
-  // Marcador
   ctx.fillStyle = '#e5e7eb';
-  ctx.font = '20px system-ui, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText(`Puntos: ${puntos}`, 12, 28);
-  for (let i = 0; i < vidas; i++) {
-    ctx.beginPath();
-    ctx.arc(ANCHO - 20 - i * 24, 20, 8, 0, Math.PI * 2);
+  ctx.font = 'bold 40px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${temperatura.toFixed(0)} °C`, ANCHO / 2, 60);
+  ctx.font = '18px system-ui, sans-serif';
+  if (apagado) {
     ctx.fillStyle = '#f87171';
-    ctx.fill();
-  }
-
-  if (pausado || vidas <= 0) {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.fillRect(0, 0, ANCHO, ALTO);
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
-    ctx.font = 'bold 36px system-ui, sans-serif';
-    ctx.fillText(vidas <= 0 ? 'Fin del juego' : 'Pausa', ANCHO / 2, ALTO / 2);
-    ctx.font = '18px system-ui, sans-serif';
-    ctx.fillText(vidas <= 0 ? 'Pulsa Espacio para jugar otra vez' : 'Pulsa Espacio para seguir', ANCHO / 2, ALTO / 2 + 32);
+    ctx.fillText('Apagado térmico. Pulsa Espacio para encenderlo', ANCHO / 2, ALTO - 24);
+  } else if (temperatura >= TEMP_THROTTLING) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText('Thermal throttling: el procesador se está frenando', ANCHO / 2, ALTO - 24);
   }
 }
 
@@ -172,4 +190,5 @@ function bucle(tiempo) {
   requestAnimationFrame(bucle);
 }
 
+actualizarBotones();
 requestAnimationFrame(bucle);
