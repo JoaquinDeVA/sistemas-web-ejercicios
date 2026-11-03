@@ -30,7 +30,9 @@ const servidor = http.createServer((req, res) => {
 
   if (url.searchParams.get("formato") === "json") {
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-    return res.end(JSON.stringify({ contrasena, longitud: contrasena.length }));
+    // Entropía de elegir x palabras al azar entre N: x * log2(N) bits
+    const entropia = x * Math.log2(DICCIONARIO.length);
+    return res.end(JSON.stringify({ contrasena, longitud: contrasena.length, entropiaBits: Number(entropia.toFixed(1)), solida: entropia >= 60 }));
   }
   res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
   res.end(`<h1>Contraseña</h1><p>${contrasena}</p>`);
