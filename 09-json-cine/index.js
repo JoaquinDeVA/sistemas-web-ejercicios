@@ -24,8 +24,17 @@ http
     }
 
     // GET /peliculas?sala=17: solo las películas con sesión en esa sala
+    // ?actor=Zendaya: solo las que salga ese actor (sin distinguir mayúsculas)
+    // ?despues=20:00: solo las que tengan alguna sesión a esa hora o más tarde
     const sala = url.searchParams.get("sala");
-    const resultado = sala ? peliculas.filter((p) => p.sesiones.some((s) => s.sala === Number(sala))) : peliculas;
+    const actor = url.searchParams.get("actor")?.toLowerCase();
+    const despues = url.searchParams.get("despues");
+    const resultado = peliculas.filter(
+      (p) =>
+        (!sala || p.sesiones.some((s) => s.sala === Number(sala))) &&
+        (!actor || p.actores.some((a) => a.toLowerCase().includes(actor))) &&
+        (!despues || p.sesiones.some((s) => s.horas.some((h) => h >= despues)))
+    );
     responder(res, 200, resultado);
   })
   .listen(PUERTO, () => console.log(`http://localhost:${PUERTO}/peliculas`));
