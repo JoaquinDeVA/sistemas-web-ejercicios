@@ -36,6 +36,16 @@ function validar(id, patron, mensaje) {
   return valido;
 }
 
+// Los socios se guardan en el navegador (nunca la contraseña)
+function leerSocios() {
+  return JSON.parse(localStorage.getItem("socios") || "[]");
+}
+
+function mostrarSocios() {
+  const n = leerSocios().length;
+  $("#socios").text(`${n} ${n === 1 ? "socio" : "socios"}`);
+}
+
 function cerrarFormulario() {
   $("#formulario").remove();
   $("#contenido").show();
@@ -43,6 +53,8 @@ function cerrarFormulario() {
 }
 
 $(function () {
+  mostrarSocios();
+
   $("#registro").click(function () {
     $("#mensaje").text("");
     $("#contenido").hide();
@@ -67,8 +79,18 @@ $(function () {
 
     if (resultados.every(Boolean)) {
       const nombre = $("#nombre").val().trim();
+      const email = $("#email").val().trim().toLowerCase();
+      const socios = leerSocios();
+      const repetido = socios.some((s) => s.email === email);
+      if (!repetido) {
+        socios.push({ nombre, email });
+        localStorage.setItem("socios", JSON.stringify(socios));
+      }
       cerrarFormulario();
-      $("#mensaje").text(`Registro completado. ¡Bienvenido/a, ${nombre}!`);
+      mostrarSocios();
+      $("#mensaje").text(repetido
+        ? `Ya estabas registrado/a, ${nombre}.`
+        : `Registro completado. ¡Bienvenido/a, ${nombre}!`);
     }
   });
 });
