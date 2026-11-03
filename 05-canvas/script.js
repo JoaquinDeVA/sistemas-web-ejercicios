@@ -150,17 +150,34 @@ function dibujarPantallaPortatil(w, h) {
   dibujarEscritorio(w, h);
 
   if (activas.has('chrome')) {
-    ctx.fillStyle = '#e5e7eb';
-    ctx.fillRect(0, 0, w, 56);
-    // 40 pestañas que se van encogiendo hasta ser ilegibles
-    const ancho = w / 40;
+    // Ventana de Chrome a pantalla completa: las pestañas se encogen hasta ser iconos
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(0, 0, w, 32);
+    const ancho = (w - 40) / 40;
     for (let i = 0; i < 40; i++) {
-      ctx.fillStyle = i % 2 ? '#d1d5db' : '#f3f4f6';
-      ctx.fillRect(i * ancho, 4, ancho - 1, 26);
-      ctx.fillStyle = `hsl(${i * 37}, 60%, 50%)`;
-      ctx.fillRect(i * ancho + 2, 12, 4, 4);
+      const x = 6 + i * ancho;
+      ctx.fillStyle = i === 3 ? '#f8fafc' : '#e2e8f0';
+      ctx.beginPath();
+      ctx.roundRect(x, 6, ancho - 2, 26, [6, 6, 0, 0]);
+      ctx.fill();
+      ctx.fillStyle = `hsl(${i * 47}, 65%, 50%)`;
+      ctx.beginPath();
+      ctx.arc(x + Math.min(8, ancho / 2), 19, 3.5, 0, Math.PI * 2);
+      ctx.fill();
     }
-    texto('Chrome (40 pestañas, 6 GB de RAM)', 8, 48, '#374151', '13px system-ui');
+    // Barra de direcciones y contenido de la página
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 32, w, 28);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.roundRect(40, 37, w - 80, 18, 9);
+    ctx.fill();
+    texto('campusvirtual.unizar.es/blackboard', 52, 50, '#475569', '11px system-ui');
+    ctx.fillStyle = '#e2e8f0';
+    for (let k = 0; k < 6; k++) ctx.fillRect(20, 80 + k * 22, k % 2 ? w - 120 : w - 60, 10);
+    texto('40 pestañas · 6 GB de RAM', w - 10, 22, '#b91c1c', 'bold 12px system-ui', 'right');
   }
 
   if (activas.has('codigo')) {
