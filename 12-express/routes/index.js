@@ -1,15 +1,28 @@
 var express = require('express');
 var router = express.Router();
 
-// Elementos que se cargan desde el servidor
-const elementos = ['Manzana', 'Naranja', 'Plátano', 'Pera', 'Uva'];
+// El scraper del ejercicio 11 sirve el estado de los productos vigilados
+const URL_SCRAPER = 'http://localhost:3001';
+
+async function cargarProductos() {
+  try {
+    const res = await fetch(URL_SCRAPER);
+    return await res.json();
+  } catch (err) {
+    return null;
+  }
+}
+
+const ETIQUETAS = { InStock: 'Disponible', OutOfStock: 'Agotado', PreOrder: 'Reserva', SoldOut: 'Agotado' };
+const etiqueta = (d) => ETIQUETAS[d] || d;
 
 // Usuario de prueba del ejercicio
 const USUARIO = { nombre: 'admin', clave: '1234' };
 
 /* GET home page. */
-router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Inicio', elementos });
+router.get('/', async function(req, res, next) {
+  const productos = await cargarProductos();
+  res.render('index', { title: 'Vigilante de stock', productos, etiqueta });
 });
 
 /* GET login page. */
@@ -30,9 +43,10 @@ router.get('/logout', function(req, res, next) {
 });
 
 /* Página restringida: solo con sesión iniciada */
-router.get('/privada', function(req, res, next) {
+router.get('/privada', async function(req, res, next) {
   if (!req.session.usuario) return res.redirect('/login');
-  res.render('privada', { title: 'Zona privada' });
+  const productos = await cargarProductos();
+  res.render('privada', { title: 'Detalle de productos', productos, etiqueta });
 });
 
 module.exports = router;

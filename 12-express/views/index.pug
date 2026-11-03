@@ -2,11 +2,14 @@ extends layout
 
 block content
   h1= title
-  ul
-    each el in elementos
-      li= el
+  if !productos
+    p El scraper (ejercicio 11) no está en marcha.
+  else
+    ul
+      each p in productos
+        li #{p.nombre}: #{etiqueta(p.disponibilidad)}
   if usuario
-    a(href='/privada') Zona privada
+    a(href='/privada') Ver detalle
   else
     a(href='/login')
       button(type='button') Login

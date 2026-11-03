@@ -2,5 +2,24 @@ extends layout
 
 block content
   h1= title
-  p Hola, #{usuario}. Esta página solo es visible con la sesión iniciada.
+  p Sesión iniciada como #{usuario}.
+  if !productos
+    p El scraper (ejercicio 11) no está en marcha.
+  else
+    table(border='1', cellpadding='6')
+      thead
+        tr
+          th Producto
+          th Estado
+          th Precio
+          th Desde
+          th Última comprobación
+      tbody
+        each p in productos
+          tr
+            td= p.nombre
+            td= etiqueta(p.disponibilidad)
+            td #{p.precio} €
+            td= new Date(p.desde).toLocaleString('es-ES')
+            td= new Date(p.ultimaComprobacion).toLocaleString('es-ES')
   a(href='/logout') Cerrar sesión
