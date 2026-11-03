@@ -15,6 +15,24 @@ function infoInicial() {
   console.log(`Node.js: ${process.version}`);
 }
 
+// Temperatura real de la CPU en Linux (en milésimas de °C); null si no hay sensor
+function leerTemperatura() {
+  try {
+    const zonas = fs.readdirSync("/sys/class/thermal").filter((z) => z.startsWith("thermal_zone"));
+    const temps = zonas.map((z) => Number(fs.readFileSync(`/sys/class/thermal/${z}/temp`, "utf8")) / 1000);
+    return temps.length ? Math.max(...temps) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Barra de 20 caracteres con color: verde, amarillo o rojo según el umbral
+function barra(valor, maximo, aviso, critico) {
+  const llenos = Math.round(Math.min(valor / maximo, 1) * 20);
+  const color = valor >= critico ? "\x1b[31m" : valor >= aviso ? "\x1b[33m" : "\x1b[32m";
+  return `${color}${"█".repeat(llenos)}\x1b[90m${"░".repeat(20 - llenos)}\x1b[0m`;
+}
+
 let cpuAnterior = process.cpuUsage();
 let tAnterior = process.hrtime.bigint();
 
@@ -32,6 +50,12 @@ function mostrar(config) {
     console.log(`CPU (proceso): ${porcentaje.toFixed(1)}%`);
     if (porcentaje > config.umbrales.cpuPorcentaje) console.warn(`AVISO: CPU por encima del ${config.umbrales.cpuPorcentaje}%`);
     console.log(`Carga del sistema (1 min): ${os.loadavg()[0].toFixed(2)}`);
+    const temp = leerTemperatura();
+    if (temp !== null) {
+      const { avisoC, criticoC } = config.umbrales.temperatura;
+      console.log(`Temperatura: ${barra(temp, 100, avisoC, criticoC)} ${temp.toFixed(0)} °C`);
+      if (temp >= criticoC) console.warn(`AVISO: ${temp.toFixed(0)} °C, el portátil se va a frenar`);
+    }
   }
   if (memoria) {
     const m = process.memoryUsage();

@@ -5,5 +5,10 @@
     "memoria": true,
     "tiempoSistema": true,
     "tiempoNode": true
+  },
+  "umbrales": {
+    "cpuPorcentaje": 80,
+    "memoriaLibreGB": 2,
+    "temperatura": { "avisoC": 70, "criticoC": 85 }
   }
 }
