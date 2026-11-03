@@ -1,4 +1,5 @@
 {
-  "intervaloMinutos": 30,
-  "pausaEntrePeticionesSegundos": 5
+  "urlBusqueda": "https://www.lenovo.com/es/es/search?fq=&text=E16%20&rows=20",
+  "chrome": "/usr/bin/google-chrome",
+  "intervaloMinutos": 30
 }

@@ -1,66 +1,75 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const cheerio = require("cheerio");
+const puppeteer = require("puppeteer-core");
 const config = require("./config.json");
-const productos = require("./productos.json");
 
 const PUERTO = 3001;
 const RUTA_ESTADO = path.join(__dirname, "estado.json");
 
-// Última comprobación de cada producto, indexada por URL. Se recupera del disco
-// para no perder desde cuándo está agotado un producto al reiniciar.
+// Estado de cada configuración, indexado por código de producto. Se recupera del
+// disco para no perder desde cuándo está agotada una configuración al reiniciar.
 let estado = fs.existsSync(RUTA_ESTADO) ? JSON.parse(fs.readFileSync(RUTA_ESTADO, "utf8")) : {};
 
-const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// Lenovo incluye en el HTML un JSON-LD (schema.org) con precio y disponibilidad,
-// así que no hace falta ejecutar JavaScript
-async function consultar(producto) {
-  const res = await fetch(producto.url, { headers: { "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0" } });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const $ = cheerio.load(await res.text());
-  for (const script of $('script[type="application/ld+json"]').toArray()) {
-    const datos = JSON.parse($(script).text());
-    if (datos["@type"] === "Product") {
-      return {
-        precio: datos.offers.price,
-        // "http://schema.org/InStock" -> "InStock"
-        disponibilidad: datos.offers.availability.split("/").pop(),
-      };
-    }
+// La búsqueda de Lenovo pinta las tarjetas con JavaScript, por eso se usa un navegador.
+// Una sola carga por ciclo: no se hacen muchas peticiones en poco tiempo.
+async function leerBusqueda() {
+  const navegador = await puppeteer.launch({ executablePath: config.chrome, headless: true });
+  try {
+    const pagina = await navegador.newPage();
+    await pagina.goto(config.urlBusqueda, { waitUntil: "networkidle2" });
+    await pagina.waitForSelector("li.product_item .product_title a");
+    return await pagina.$$eval("li.product_item", (tarjetas) =>
+      tarjetas.map((li) => {
+        const enlace = li.querySelector(".product_title a");
+        const texto = li.innerText;
+        // Con descuento salen dos precios, el último es el vigente
+        const precios = [...texto.matchAll(/(\d[\d.]*,\d\d)\s*€/g)].map((m) => m[1]);
+        return {
+          codigo: [...li.classList].find((c) => c.startsWith("productCode_")).slice("productCode_".length),
+          modelo: enlace.innerText.trim(),
+          url: new URL(enlace.getAttribute("href"), location.origin).href,
+          precio: precios[precios.length - 1],
+          ram: (texto.match(/\d+ GB \w*DDR\w*/) || [""])[0],
+          so: (texto.match(/Windows 11 \w+|FreeDOS|Sin sistema operativo/) || ["Sin SO"])[0],
+          agotado: /NO DISPONIBLE/i.test(texto),
+        };
+      })
+    );
+  } finally {
+    await navegador.close();
   }
-  throw new Error("No se encontró el JSON-LD del producto");
 }
 
-async function comprobarTodos() {
-  for (const producto of productos) {
+async function comprobar() {
+  try {
     const ahora = new Date().toISOString();
-    const anterior = estado[producto.url];
-    try {
-      const { precio, disponibilidad } = await consultar(producto);
+    // La búsqueda también devuelve otros modelos, solo interesan los E16
+    for (const p of (await leerBusqueda()).filter((p) => p.modelo.includes("E16"))) {
+      const disponibilidad = p.agotado ? "OutOfStock" : "InStock";
+      const anterior = estado[p.codigo];
       const cambio = !anterior || anterior.disponibilidad !== disponibilidad;
-      estado[producto.url] = {
-        nombre: producto.nombre,
-        precio,
+      estado[p.codigo] = {
+        nombre: `${p.modelo} · ${p.ram} · ${p.so} (${p.codigo})`,
+        url: p.url,
+        precio: p.precio,
         disponibilidad,
         ultimaComprobacion: ahora,
         // Solo se actualiza cuando cambia la disponibilidad
         desde: cambio ? ahora : anterior.desde,
       };
-      console.log(`${producto.nombre}: ${disponibilidad} (${precio} €)`);
-      if (anterior && cambio) console.log(`  CAMBIO: ${anterior.disponibilidad} -> ${disponibilidad}`);
-    } catch (err) {
-      console.error(`${producto.nombre}: error (${err.message})`);
+      if (anterior && cambio) console.log(`CAMBIO ${p.codigo}: ${anterior.disponibilidad} -> ${disponibilidad}`);
     }
-    // No se hacen muchas peticiones seguidas
-    await dormir(config.pausaEntrePeticionesSegundos * 1000);
+    fs.writeFileSync(RUTA_ESTADO, JSON.stringify(estado, null, 2));
+    const agotados = Object.values(estado).filter((e) => e.disponibilidad === "OutOfStock").length;
+    console.log(`${new Date().toLocaleTimeString()}: ${Object.keys(estado).length} configuraciones, ${agotados} agotadas`);
+  } catch (err) {
+    console.error("Error al comprobar:", err.message);
   }
-  fs.writeFileSync(RUTA_ESTADO, JSON.stringify(estado, null, 2));
 }
 
-comprobarTodos();
-setInterval(comprobarTodos, config.intervaloMinutos * 60 * 1000);
+comprobar();
+setInterval(comprobar, config.intervaloMinutos * 60 * 1000);
 
 http
   .createServer((req, res) => {
